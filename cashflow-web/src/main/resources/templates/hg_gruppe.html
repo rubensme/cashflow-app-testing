@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title th:text="${'Haushaltsgruppe \u2013 ' + (gruppe != null ? gruppe.name : '')}">Haushaltsgruppe</title>
+
+  <!-- mantém seus assets globais já usados nas outras páginas -->
+  <link rel="stylesheet" th:href="@{/css/site.css}">
+  <link rel="stylesheet" th:href="@{/css/hg_gruppe.css}">
+
+  <script defer th:src="@{/js/site.js}"></script>
+
+  
+</head>
+<body class="hg-gruppe-page">
+
+  <!-- HEADER e NAV: exatamente os fragments que você já usa em todas as páginas -->
+  <header th:replace="~{fragments/site-header :: siteHeader}"></header>
+  <hr>
+
+  <th:block th:if="${session.eingeloggterNutzer != null}">
+    <nav th:replace="~{fragments/site-navbar :: siteNavbar(${gruppe}, ${ownedGroups}, ${memberGroups})}"></nav>
+    <hr>
+  </th:block>
+
+  <!-- IMPORTANTE: usar a mesma largura do header/navbar -->
+  <div class="site-container" th:if="${session.eingeloggterNutzer != null}">
+
+    <section class="card">
+      <h2 style="margin:0;">
+        Haushaltsgruppe: <span th:text="${gruppe != null ? gruppe.name : ''}">Gruppenname</span>
+      </h2>
+    </section>
+
+    <section class="card" style="display:flex; align-items:center; justify-content:space-between;">
+      <div style="font-weight:700;">Gesamtsaldo:</div>
+      <div class="total-box" th:classappend="${gruppeSaldo < 0} ? ' neg'">
+        <span th:text="${#numbers.formatDecimal(gruppeSaldo,1,'POINT',2,'COMMA')}">0,00</span> €
+      </div>
+    </section>
+
+    <!-- GRÁFICO -->
+    <section class="card">
+      <h3 style="margin-top:0; text-align:left;">Saldo – letzte 30 Tage</h3>
+      <canvas id="saldoChart" width="900" height="220" style="max-width:100%; display:block; margin:0 auto;"></canvas>
+
+      <script th:inline="javascript">
+        const labels = /*[[${saldo30Labels}]]*/ [];
+        const values = /*[[${saldo30Values}]]*/ [];
+
+        (function draw(){
+          const canvas = document.getElementById('saldoChart');
+          if (!canvas || !values || values.length === 0) return;
+          const ctx = canvas.getContext('2d');
+
+          function fmtEuroFixed(n, withSign){
+            if (typeof n === 'string') n = Number(n.replace(/\./g,'').replace(',', '.'));
+            if (isNaN(n)) n = 0;
+            const s = n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return (withSign && n >= 0 ? '+' : '') + s + ' €';
+          }
+
+          const vals = values.map(v => typeof v === 'string' ? Number(v) : v);
+
+          const W = canvas.width, H = canvas.height;
+          const pad = {top: 16, right: 16, bottom: 28, left: 48};
+
+          const minVal = Math.min(...vals), maxVal = Math.max(...vals);
+          const padY = (maxVal - minVal) * 0.08 || 1;
+          const yMin = minVal - padY, yMax = maxVal + padY;
+
+          const x0 = pad.left, x1 = W - pad.right;
+          const y0 = H - pad.bottom, y1 = pad.top;
+
+          const n = vals.length;
+
+          const compact = 0.80;
+          const Lfull = x1 - x0;
+          const L = Lfull * compact;
+          const offsetX = (Lfull - L) / 2;
+          const x0c = x0 + offsetX;
+          const x1c = x1 - offsetX;
+
+          const xStep = n > 1 ? (x1c - x0c) / (n - 1) : 0;
+          const xAt = i => x0c + i * xStep;
+          const yAt = v => y0 - ((v - yMin) / (yMax - yMin)) * (y0 - y1);
+
+          ctx.clearRect(0,0,W,H);
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0,0,W,H);
+
+          if (n > 1) {
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < n; i += 5) {
+              const x = xAt(i);
+              ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, y0); ctx.stroke();
+            }
+          }
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.strokeStyle='#e5e7eb'; ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0, y1); ctx.strokeStyle='#e5e7eb'; ctx.stroke();
+
+          if (n === 1) {
+            const x = (x0c + x1c) / 2;
+            const y = yAt(vals[0]);
+            ctx.fillStyle = '#111827';
+            ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fill();
+          } else {
+            ctx.strokeStyle = '#111827';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < n; i++) {
+              const x = xAt(i), y = yAt(vals[i]);
+              if (i === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+            }
+            ctx.stroke();
+
+            ctx.fillStyle = '#111827';
+            for (let i = 0; i < n; i++) {
+              const x = xAt(i), y = yAt(vals[i]);
+              ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI*2); ctx.fill();
+            }
+          }
+
+          ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+          ctx.textBaseline = 'top';
+
+          if (n > 1) {
+            for (let i = 0; i < n; i += 5) {
+              const x = xAt(i), y = yAt(vals[i]);
+              const txt = fmtEuroFixed(vals[i], true);
+              const w = ctx.measureText(txt).width + 8;
+              const h = 16;
+              const boxX = Math.min(Math.max(x - w/2, x0), x1 - w);
+              const boxY = Math.max(y - 24, y1);
+              ctx.fillStyle = '#f3f4f6';
+              ctx.fillRect(boxX, boxY, w, h);
+              ctx.strokeStyle = '#d1d5db';
+              ctx.strokeRect(boxX, boxY, w, h);
+              ctx.fillStyle = '#111827';
+              ctx.fillText(txt, boxX + 4, boxY + 2);
+
+              ctx.fillStyle = '#6b7280';
+              const dateTxt = labels[i] || '';
+              ctx.fillText(dateTxt, x - ctx.measureText(dateTxt).width/2, y0 + 6);
+            }
+            if ((n-1) % 5 !== 0) {
+              const i = n-1, x = xAt(i);
+              ctx.fillStyle = '#6b7280';
+              const dateTxt = labels[i] || '';
+              ctx.fillText(dateTxt, x - ctx.measureText(dateTxt).width/2, y0 + 6);
+            }
+          } else {
+            const x = (x0c + x1c) / 2;
+            ctx.fillStyle = '#6b7280';
+            const dateTxt = labels[0] || '';
+            ctx.fillText(dateTxt, x - ctx.measureText(dateTxt).width/2, y0 + 6);
+          }
+
+          ctx.fillStyle = '#6b7280';
+          [yMin, yMax].forEach(v => {
+            const y = yAt(v);
+            const t = fmtEuroFixed(v, true);
+            ctx.fillText(t, 6, y - 6);
+          });
+
+          (function drawFinalLabel(){
+            const i = n - 1;
+            const x = n === 1 ? (x0c + x1c) / 2 : xAt(i);
+            const y = yAt(vals[i]);
+            const txt = fmtEuroFixed(vals[i], true);
+            const w = ctx.measureText(txt).width + 8;
+            const h = 16;
+            const boxX = Math.min(Math.max(x - w/2, x0), x1 - w);
+            const boxY = Math.max(y - 24, y1);
+            const bg = vals[i] >= 0 ? '#10B981' : '#EF4444';
+            const border = vals[i] >= 0 ? '#059669' : '#DC2626';
+            ctx.fillStyle = bg; ctx.fillRect(boxX, boxY, w, h);
+            ctx.strokeStyle = border; ctx.strokeRect(boxX, boxY, w, h);
+            ctx.fillStyle = '#ffffff'; ctx.fillText(txt, boxX + 4, boxY + 2);
+          })();
+        })();
+      </script>
+    </section>
+
+    <!-- Blocos + formulário -->
+    <form th:action="@{/hg/gruppe/{id}/uebernehmen(id=${gruppe.gruppeId})}" method="post">
+      <section class="card" th:if="${mitglieder != null and !#lists.isEmpty(mitglieder)}">
+        <h3 style="margin:0 0 8px 0;">Konten in der Gruppe</h3>
+
+        <div th:each="m : ${mitglieder}" class="member-block" th:classappend="${m.isPending} ? ' muted'">
+          <div style="font-weight:600;">
+            Mitglied:
+            <span th:text="${m.vorname}">Max</span>
+            <span th:if="${m.isOwner}" class="muted"> (Owner)</span>
+            <span th:if="${m.isPending}" class="muted"> - ausstehend</span>
+          </div>
+
+          <div th:if="${!m.isPending}">
+            <div class="muted" style="margin:6px 0 2px 0;">Quellen</div>
+
+            <div th:if="${m.konten == null or #lists.isEmpty(m.konten)}" class="muted" style="margin-bottom:6px;">
+              Keine Konten.
+            </div>
+
+            <div th:each="k : ${m.konten}" class="konto-row">
+              <label>
+                <input type="checkbox" name="kontoIds"
+                       th:value="${k.kontoId}"
+                       th:checked="${checkedKontoIds != null and checkedKontoIds.contains(k.kontoId)}"/>
+                <span th:text="${k.kontoName}">Konto</span>
+              </label>
+              <div class="saldo" th:classappend="${k.saldo >= 0} ? ' pos' : ' neg'">
+                <span th:text="${#numbers.formatDecimal(k.saldo,1,'POINT',2,'COMMA')}">0,00</span> €
+              </div>
+            </div>
+
+            <div style="margin-top:6px;">
+              <strong>Saldo total:</strong>
+              <strong th:classappend="${m.total >= 0} ? ' amount-pos' : ' amount-neg'">
+                <span th:text="${#numbers.formatDecimal(m.total,1,'POINT',2,'COMMA')}">0,00</span> €
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit">Übernehmen</button>
+        </div>
+      </section>
+    </form>
+
+    <!-- ================== GEPLANTE ================== -->
+    <hr>
+    <h3>Geplante Transaktionen</h3>
+
+    <form th:action="@{|/hg/gruppe/${gruppe.gruppeId}|}" method="get" style="margin-bottom:6px;">
+      <label>Vorschau bis:
+        <input type="date" name="prognoseBis" th:value="${#temporals.format(prognoseBis, 'yyyy-MM-dd')}" />
+      </label>
+      <button type="submit">Aktualisieren</button>
+    </form>
+
+    <section class="card">
+      <h4 style="margin-top:0;">Nächste geplante Transaktionen bis
+        <span th:text="${#temporals.format(prognoseBis, 'dd.MM.yyyy')}">31.08.2025</span>
+      </h4>
+
+      <table class="table-fit" border="1" cellpadding="5" cellspacing="0">
+        <thead>
+          <tr>
+            <th>Datum</th>
+            <th>Mitglied</th>
+            <th>Titel</th>
+            <th style="text-align:right;">Betrag</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="p : ${prognoseVorgaengeMitglied}">
+            <td th:text="${#temporals.format(p.datum, 'dd.MM.yyyy')}">31.08.2025</td>
+            <td th:text="${p.mitglied}">Max Mustermann</td>
+            <td th:text="${p.titel}">Miete</td>
+            <td style="text-align:right;"
+                th:classappend="${p.betrag < 0} ? 'amount-neg' : 'amount-pos'"
+                th:text="${p.betrag > 0 ? '+' + #numbers.formatDecimal(p.betrag,1,'POINT',2,'COMMA') : #numbers.formatDecimal(p.betrag,1,'POINT',2,'COMMA')}">
+              0,00
+            </td>
+          </tr>
+
+          <tr th:if="${#lists.isEmpty(prognoseVorgaengeMitglied)}">
+            <td colspan="4">Keine Vorkommnisse im gewählten Zeitraum.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top:14px;">
+        <strong>Prognostiziertes Saldo am </strong>
+        <span th:text="${#temporals.format(prognoseBis, 'dd.MM.yyyy')}">31.08.2025</span>:
+        <span th:classappend="${prognostiziertesSaldo >= 0} ? 'amount-pos' : 'amount-neg'"
+              th:text="${prognostiziertesSaldo >= 0 ? '+' + #numbers.formatDecimal(prognostiziertesSaldo,1,'POINT',2,'COMMA') : #numbers.formatDecimal(prognostiziertesSaldo,1,'POINT',2,'COMMA')}">
+          0,00
+        </span>
+      </p>
+    </section>
+    <!-- ================== /GEPLANTE ================== -->
+
+  </div>
+</body>
+</html>

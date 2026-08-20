@@ -1,0 +1,21 @@
+/* Específico da página hg_gruppe */
+body { background:#fafafa; }
+
+/* Mantém header/navbar alinhados com a Home:
+   - container global = 960px (em site.css)
+   - cartões ficam mais estreitos localmente, se quiser */
+.card { max-width: 720px; }
+
+.total-box{
+  display:inline-block; padding:10px 14px; border-radius:12px;
+  background:#10B981; color:#fff; font-weight:700; letter-spacing:.2px;
+}
+.member-block{ margin-top:12px; padding-top:8px; border-top:1px dashed #e5e7eb; }
+.konto-row{ display:flex; align-items:center; gap:10px; padding:4px 0; }
+.konto-row label{ display:flex; align-items:center; gap:8px; flex:1; }
+.saldo{ min-width:140px; text-align:right; }
+.pos{ color:#059669; }
+.neg{ color:#b91c1c; }
+
+.amount-neg { color:#b91c1c; font-weight:700; }
+.amount-pos { color:#059669; font-weight:700; }

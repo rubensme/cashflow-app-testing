@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Willkommen</title>
+</head>
+<body>
+
+<!-- Exibe nome do usuário logado -->
+<h1 th:if="${nutzer != null}">
+    Willkommen, <span th:text="${nutzer.vorname}">Nutzer</span>!
+</h1>
+
+<!-- Caso a sessão tenha sido perdida ou acessado diretamente -->
+<h1 th:if="${nutzer == null}">
+    Willkommen! Bitte logge dich ein.
+</h1>
+
+<!-- Botão de logout -->
+<form th:action="@{/logout}" method="post">
+    <button type="submit">Abmelden</button>
+</form>
+
+<p><a href="/home">Zurück zur Startseite</a></p>
+
+</body>
+</html>

@@ -1,0 +1,36 @@
+/* Página: Konto */
+body { background:#fff; }
+
+/* Largura do conteúdo principal (header/nav usam .site-container) */
+.container { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+
+/* Cartões / formulário */
+.card {
+  padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.75rem;
+  margin: 0 auto 1rem auto; max-width: 900px; background:#fff;
+}
+hr { margin: 16px 0; }
+.section-gap { height:16px; }
+
+.option-row { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+.checkbox-like { display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+.checkbox-like input[type="checkbox"]{ width:18px; height:18px; }
+
+.fieldset { margin-top:12px; display:none; }
+.fieldset label { display:block; margin:6px 0 2px 0; font-weight:600; }
+.fieldset input, .fieldset select {
+  width:100%; max-width:420px; padding:8px; border:1px solid #d1d5db; border-radius:8px; background:#fff;
+}
+.disabled-note { font-size:0.9em; color:#6b7280; margin-top:4px; }
+
+/* Tabelas */
+table { border-collapse: collapse; }
+.table-fit { width: auto; margin: 0 auto; }
+th, td { border: 1px solid #999; padding: 6px; }
+.row-title { font-weight:600; }
+
+/* Flash */
+.flash-success{
+  display:inline-block; margin: 6px 0 10px 0; padding: 8px 12px;
+  border-radius: 8px; background:#d1fae5; color:#065f46; border:1px solid #10b981; font-weight:600;
+}

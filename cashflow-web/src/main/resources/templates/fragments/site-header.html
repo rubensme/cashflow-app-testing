@@ -1,0 +1,43 @@
+<!-- templates/fragments/site-header.html -->
+<header class="site-header" th:fragment="siteHeader">
+  <div class="site-container">
+    <div class="left-slot">
+      <a href="/home" class="round-btn" aria-label="Home" title="Home">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 10.5L12 3l9 7.5" stroke="#111827" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M5 10v10h14V10" stroke="#111827" stroke-width="1.5" fill="none" stroke-linecap="round"></path>
+          <path d="M9 20v-6h6v6" stroke="#111827" stroke-width="1.5" fill="none"></path>
+        </svg>
+      </a>
+    </div>
+
+    <div class="brand">
+      <h2 class="logo-title">ca<span class="logo-dollar">$</span>hflow</h2>
+    </div>
+
+    <div class="right-slot">
+      <div th:if="${session.eingeloggterNutzer != null}" class="user-block" id="userMenuWrap">
+        <span class="user-name" th:text="${session.eingeloggterNutzer.vorname}">Nutzer</span>
+        <div class="user-menu-wrap">
+          <a href="#" class="round-btn" id="userMenuBtn" aria-haspopup="true" aria-expanded="false" title="Konto">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="8" r="4" stroke="#111827" stroke-width="1.5"></circle>
+              <path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke="#111827" stroke-width="1.5" fill="none"></path>
+            </svg>
+          </a>
+          <div class="user-dropdown" id="userDropdown" role="menu" aria-labelledby="userMenuBtn">
+            <a href="#" class="menu-item disabled" tabindex="-1">Login-Daten bearbeiten</a>
+            <a href="#" class="menu-item disabled" tabindex="-1">Konto löschen</a>
+            <form th:action="@{/logout}" method="post">
+              <button type="submit" class="as-button">Abmelden</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div th:if="${session.eingeloggterNutzer == null}">
+        <a href="/nutzer">Anmelden / Registrieren</a>
+      </div>
+    </div>
+  </div>
+</header>

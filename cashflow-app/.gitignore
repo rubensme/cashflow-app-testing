@@ -1,0 +1,47 @@
+# 🧪 Maven
+/target/
+!.mvn/wrapper/maven-wrapper.jar
+**/dependency-reduced-pom.xml
+**/buildNumber.properties
+**/pom.xml.tag
+**/pom.xml.releaseBackup
+**/release.properties
+**/buildNumber.properties
+.mvn/timing.properties
+
+# 🧰 Eclipse
+/.classpath
+/.project
+/.settings/
+.apt_generated/
+.factorypath
+
+# ⚙️ IntelliJ IDEA (caso você use um dia)
+/.idea/
+/*.iml
+/out/
+
+# 🔐 Sistema
+.DS_Store
+Thumbs.db
+
+# 🧹 Logs e temporários
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# 💡 Outras pastas de build
+/bin/
+/build/
+/dist/
+
+# ⚙️ Configurações pessoais
+*.iws
+*.ipr
+*.bak
+*.orig
+
+# ☁️ Arquivos de ambiente e variáveis
+.env

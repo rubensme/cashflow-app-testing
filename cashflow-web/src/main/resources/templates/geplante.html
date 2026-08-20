@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Geplante Transaktionen bearbeiten</title>
+
+  <!-- CSS/JS comuns (header + navbar + utilidades) -->
+  <link rel="stylesheet" th:href="@{/css/site.css}">
+  <script defer th:src="@{/js/site.js}"></script>
+
+  <!-- CSS específico da página -->
+  <link rel="stylesheet" th:href="@{/css/geplante.css}">
+</head>
+<body>
+
+  <!-- Header compartilhado -->
+  <header th:replace="~{fragments/site-header :: siteHeader}"></header>
+  <hr>
+
+  <!-- Navbar compartilhada (apenas se logado) -->
+  <th:block th:if="${session.eingeloggterNutzer != null}">
+    <nav th:replace="~{fragments/site-navbar :: siteNavbar(${gruppe}, ${ownedGroups}, ${memberGroups})}"></nav>
+    <hr>
+  </th:block>
+
+  <div class="container">
+    <section class="card">
+      <h2 style="margin-top:0;">Geplante Transaktionen bearbeiten</h2>
+
+      <form th:action="@{/geplante/uebernehmen}" method="post">
+        <table>
+          <thead>
+            <tr>
+              <th>Titel</th>
+              <th>Datum</th>
+              <th>Periode</th>
+              <th>Betrag</th>
+              <th>Status</th>
+              <th>Löschen</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="g,iter : ${geplante}">
+              <input type="hidden" name="id" th:value="${g.geplanteId}" />
+              <td><input type="text" name="titel" th:value="${g.titel}" /></td>
+              <td>
+                <input type="date" name="datum"
+                       th:value="${g.startDatum != null ? #temporals.format(g.startDatum,'yyyy-MM-dd') : ''}" />
+              </td>
+              <td>
+                <select name="periode">
+                  <option value="EINMALIG"         th:selected="${g.periode} == 'EINMALIG'">einmalig</option>
+                  <option value="MONATLICH"        th:selected="${g.periode} == 'MONATLICH'">monatlich</option>
+                  <option value="WOECHENTLICH"     th:selected="${g.periode} == 'WOECHENTLICH'">wöchentlich</option>
+                  <option value="VIERTELJAEHRLICH" th:selected="${g.periode} == 'VIERTELJAEHRLICH'">vierteljährlich</option>
+                  <option value="JAEHRLICH"        th:selected="${g.periode} == 'JAEHRLICH'">jährlich</option>
+                </select>
+              </td>
+              <td><input type="number" step="0.01" name="betrag" th:value="${g.betrag}" /></td>
+              <td>
+                <select name="status">
+                  <option value="AKTIV"   th:selected="${g.status} == 'AKTIV'">aktiv</option>
+                  <option value="BEZAHLT" th:selected="${g.status} == 'BEZAHLT'">bezahlt</option>
+                </select>
+              </td>
+              <td><input type="checkbox" name="delete" th:value="${iter.index}" /></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="actions">
+          <button type="submit">Übernehmen</button>
+          <a href="/home">Zurück zur Startseite</a>
+        </div>
+      </form>
+    </section>
+  </div>
+
+</body>
+</html>

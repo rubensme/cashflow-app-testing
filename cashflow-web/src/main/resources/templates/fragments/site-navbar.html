@@ -1,0 +1,47 @@
+<!-- templates/fragments/site-navbar.html -->
+<nav class="main-nav" th:fragment="siteNavbar(gruppe, ownedGroups, memberGroups)">
+  <div class="site-container nav-root">
+    <div class="nav-group">
+      <button type="button" class="nav-top" data-target="nav-accounts">Konten</button>
+      <div class="nav-sub" id="nav-accounts">
+        <a class="item" th:href="@{/home}">Meine Konten</a>
+        <hr class="sub-sep">
+        <a class="item" th:href="@{/konto}">Konten hinzufügen / bearbeiten</a>
+      </div>
+    </div>
+
+    <span class="nav-sep">|</span>
+
+    <div class="nav-group">
+      <button type="button" class="nav-top" data-target="nav-groups">Haushaltsgruppen</button>
+      <div class="nav-sub" id="nav-groups">
+        <a class="item" th:href="@{/haushaltsgruppe}">Haushaltsgruppe erstellen / Einladungen</a>
+        <hr class="sub-sep"
+            th:if="${(ownedGroups != null and !#lists.isEmpty(ownedGroups)) or (memberGroups != null and !#lists.isEmpty(memberGroups))}" />
+        <div th:if="${ownedGroups != null and !#lists.isEmpty(ownedGroups)}">
+          <a class="item" th:each="g : ${ownedGroups}"
+             th:href="@{/hg/gruppe/{id}(id=${g.gruppeId})}"
+             th:text="${'Gruppe ' + g.name}">Gruppe</a>
+        </div>
+        <hr class="sub-sep"
+            th:if="${(ownedGroups != null and !#lists.isEmpty(ownedGroups)) and (memberGroups != null and !#lists.isEmpty(memberGroups))}" />
+        <div th:if="${memberGroups != null and !#lists.isEmpty(memberGroups)}">
+          <a class="item" th:each="g : ${memberGroups}"
+             th:href="@{/hg/gruppe/{id}(id=${g.gruppeId})}"
+             th:text="${'Gruppe ' + g.name}">Gruppe</a>
+        </div>
+        <span class="item muted"
+              th:if="${(ownedGroups == null or #lists.isEmpty(ownedGroups)) and (memberGroups == null or #lists.isEmpty(memberGroups))}">
+          Keine Gruppen.
+        </span>
+      </div>
+    </div>
+
+    <span class="nav-sep">|</span>
+
+    <a class="nav-top"
+       th:href="${gruppe != null} ? @{|/hg/gruppe/${gruppe.gruppeId}/sparziele|} : @{/sparziele}">
+      Sparziele
+    </a>
+  </div>
+</nav>

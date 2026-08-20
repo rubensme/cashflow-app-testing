@@ -1,0 +1,38 @@
+/* Home: estilos específicos da página */
+body { background:#fff; }
+
+.container { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+
+/* Tabelas e tipografia locais */
+table { border-collapse: collapse; }
+.table-fit { width: auto; margin: 0 auto; }
+th, td { border: 1px solid #999; padding: 6px; }
+
+/* Cores de valores */
+.neg { color: red; font-weight: bold; }
+.pos { color: green; font-weight: bold; }
+
+/* Cards / blocos */
+.card {
+  padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.75rem;
+  margin: 0 auto 1rem auto; max-width: 900px; background:#fff;
+}
+
+/* Gesamtsaldo badge */
+.saldo-box { display: inline-block; padding: 6px 12px; border-radius: 8px; color: #fff; font-weight: 700; border: 1px solid transparent; }
+.saldo-pos { background: green; border-color: #059669; }
+.saldo-neg { background: #EF4444; border-color: #DC2626; }
+
+/* Fontes (quellen) */
+.konto-block { margin-bottom: 12px; }
+.konto-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.konto-actions { font-size: 0.9em; margin-left: 22px; margin-top: 4px; }
+.konto-actions a { margin-right: 10px; }
+
+/* Forms inline */
+.inline-form { display: none; margin-left: 22px; margin-top: 6px; }
+.inline-form form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.inline-form label { font-weight: 600; }
+
+/* Chart */
+#saldoChart { display: block; margin: 0 auto; }

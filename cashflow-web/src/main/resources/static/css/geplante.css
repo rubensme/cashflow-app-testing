@@ -1,0 +1,18 @@
+/* Página: Geplante Transaktionen bearbeiten */
+body { background:#fff; }
+
+/* Largura do conteúdo principal (header/nav vêm do fragment) */
+.container { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+
+/* Cartão padrão */
+.card{
+  padding:1rem; border:1px solid #e5e7eb; border-radius:12px;
+  margin:0 auto 1rem auto; max-width:900px; background:#fff;
+}
+
+/* Tabela de edição */
+table { border-collapse: collapse; width:auto; margin: 0 auto; }
+th, td { border: 1px solid #999; padding: 6px; }
+th { background:#f3f4f6; text-align:left; }
+
+.actions { margin-top:10px; display:flex; gap:10px; align-items:center; }

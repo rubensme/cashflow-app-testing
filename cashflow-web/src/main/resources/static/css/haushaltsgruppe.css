@@ -1,0 +1,46 @@
+/* Página: Haushaltsgruppe (estilos específicos) */
+
+.container { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+
+.card {
+  padding: 1rem; border: 1px solid #e5e7eb; border-radius: 12px;
+  margin: 0 auto 1rem auto; max-width: 900px; background:#fff;
+}
+.card-warn { border-color:#fecaca; }
+
+.muted { color:#6b7280; }
+.flash-ok  { color:#065f46; font-weight:600; }
+.flash-err { color:#b91c1c; font-weight:600; }
+
+.text {
+  width:100%; max-width:420px; padding:8px;
+  border:1px solid #d1d5db; border-radius:8px;
+}
+
+/* E-mails em linhas */
+.email-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.email-row input[type="email"]{ flex:1; padding:8px; border:1px solid #d1d5db; border-radius:8px; }
+.add-btn{ width:34px; height:34px; border-radius:8px; border:1px solid #d1d5db; background:#f3f4f6; cursor:pointer; }
+.add-btn:hover{ background:#e5e7eb; }
+
+ul.members-list{ margin:2px 0 10px 18px; padding-left:0; list-style:none; }
+.group-block{ margin-bottom:12px; }
+.group-title{ margin:0 0 4px 0; }
+.msg{ margin-left:10px; }
+
+.row-actions{
+  margin-left:10px; display:flex; gap:8px; align-items:center;
+}
+.row-actions form{ margin:0; }
+
+.invite-title{ margin:0 0 6px 0; }
+.invite-ignore{ margin-top:6px; }
+
+.toggle-link{ text-decoration:underline; cursor:pointer; }
+.consent-box{
+  display:none; margin-top:8px; padding:8px;
+  border:1px solid #e5e7eb; border-radius:8px; background:#fff;
+}
+.konto-share{ margin-top:10px; }
+.konto-list label{ display:block; margin:4px 0; }
+.actions{ margin-top:12px; display:flex; gap:8px; align-items:center; }

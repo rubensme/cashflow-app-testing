@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Haushaltsgruppe</title>
+
+  <!-- comuns -->
+  <link rel="stylesheet" th:href="@{/css/site.css}">
+  <script defer th:src="@{/js/site.js}"></script>
+
+  <!-- específicos desta página -->
+  <link rel="stylesheet" th:href="@{/css/haushaltsgruppe.css}">
+</head>
+<body>
+
+  <!-- Header compartilhado -->
+  <header th:replace="~{fragments/site-header :: siteHeader}"></header>
+  <hr>
+
+  <!-- Navbar compartilhada (apenas se logado) -->
+  <th:block th:if="${session.eingeloggterNutzer != null}">
+    <nav th:replace="~{fragments/site-navbar :: siteNavbar(${gruppe}, ${ownedGroups}, ${memberGroups})}"></nav>
+    <hr>
+  </th:block>
+
+  <div class="container" th:if="${session.eingeloggterNutzer != null}">
+
+    <!-- ======= TOP ALERTS ======= -->
+    <div th:if="${topAlerts != null and !#lists.isEmpty(topAlerts)}" class="card card-warn">
+      <p th:each="msg : ${topAlerts}" class="flash-err" th:text="${msg}">Max Muster hat die Gruppe "Haushalt A" gelöscht.</p>
+    </div>
+
+    <!-- Flashs -->
+    <p class="flash-err" th:if="${hgError}"   th:text="${hgError}"></p>
+    <p class="flash-ok"  th:if="${successHG}" th:text="${successHG}"></p>
+    <p class="flash-ok"  th:if="${infoHG}"    th:text="${infoHG}"></p>
+
+    <!-- ========= Criar grupo ========= -->
+    <section class="card">
+      <h2 style="margin-top:0;">Haushaltsgruppe erstellen</h2>
+
+      <form th:action="@{/hg/anlegen}" method="post" id="hgCreateForm">
+        <label>Gruppenname</label><br>
+        <input type="text" name="name" class="text" th:value="${prefillName}" required><br><br>
+
+        <label>Beschreibung (optional)</label><br>
+        <input type="text" name="beschr" class="text" th:value="${prefillBeschr}"><br><br>
+
+        <label>Autorisierte Benutzer (Whitelist – E-Mails)</label>
+        <div id="emailList" style="margin-top:6px;">
+          <div class="email-row">
+            <input type="email" name="emails" placeholder="email@example.com" required>
+            <button class="add-btn" type="button" id="addEmailBtn">+</button>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <button type="submit">Übernehmen &amp; Einladungen absenden</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ========= Meus grupos ========= -->
+    <section class="card"
+             th:if="${(ownedGroups != null and !#lists.isEmpty(ownedGroups)) or (memberGroups != null and !#lists.isEmpty(memberGroups))}">
+      <h2 style="margin-top:0;">Meine Haushaltsgruppen</h2>
+
+      <!-- Owner -->
+      <div th:if="${ownedGroups != null and !#lists.isEmpty(ownedGroups)}">
+        <h3>Eigene Gruppen</h3>
+
+        <div th:each="g : ${ownedGroups}" class="group-block">
+          <p class="group-title">
+            <strong th:text="${g.name}">Gruppenname</strong>
+            <span class="muted">(Owner)</span>
+          </p>
+
+          <div class="muted">Mitglieder:</div>
+          <ul class="members-list"
+              th:with="leftList=${leftByGroupUser != null ? leftByGroupUser[g.gruppeId] : null}">
+            <li th:each="m : ${membersByGroup[g.gruppeId]}">
+              <span th:text="${m.vorname + ' ' + m.nachname}">Max Muster</span>
+              <span> – </span>
+              <span th:text="${m.email}">max@example.com</span>
+              <span> – </span>
+              <span th:text="${m.aktiv ? 'aktiv' : (leftList != null ? (#lists.contains(leftList, m.nutzerId) ? 'ausgetreten' : 'ausstehend') : 'ausstehend')}">aktiv</span>
+              <span th:if="${m.nutzerId == g.ownerNutzerId}" class="muted"> (Owner)</span>
+            </li>
+            <li th:each="em : ${pendingEmailsByGroup[g.gruppeId]}">
+              <span class="muted" th:text="${em}">jemand@example.com</span>
+              <span class="muted"> – ausstehend</span>
+            </li>
+            <li th:if="${(membersByGroup[g.gruppeId] == null or #lists.isEmpty(membersByGroup[g.gruppeId])) and (pendingEmailsByGroup[g.gruppeId] == null or #lists.isEmpty(pendingEmailsByGroup[g.gruppeId]))}">
+              <em>Keine Mitglieder.</em>
+            </li>
+          </ul>
+
+          <!-- Mensagens -->
+          <div th:if="${joinedMsgsByGroup != null and joinedMsgsByGroup[g.gruppeId] != null}">
+            <p th:each="msg : ${joinedMsgsByGroup[g.gruppeId]}" class="flash-ok msg" th:text="${msg}">Beitritt.</p>
+          </div>
+          <div th:if="${leftMsgsByGroup != null and leftMsgsByGroup[g.gruppeId] != null}">
+            <p th:each="msg : ${leftMsgsByGroup[g.gruppeId]}" class="flash-err msg" th:text="${msg}">Austritt.</p>
+          </div>
+
+          <!-- Ações do Owner -->
+          <div class="row-actions">
+            <form th:action="@{/hg/gruppe/{id}(id=${g.gruppeId})}" method="get">
+              <button type="submit">Zur Gruppenseite</button>
+            </form>
+
+            <form th:action="@{/hg/gruppe/loeschen}" method="post" th:id="${'delForm-' + g.gruppeId}"></form>
+            <a href="#"
+               th:attr="data-form-id=${'delForm-' + g.gruppeId}"
+               onclick="if(confirm('Gruppe wirklich löschen?')){ document.getElementById(this.dataset.formId).submit(); } return false;">
+              Gruppe löschen
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Membro ativo -->
+      <div th:if="${memberGroups != null and !#lists.isEmpty(memberGroups)}">
+        <h3>Als eingeladenes Mitglied</h3>
+
+        <div th:each="g : ${memberGroups}" class="group-block" th:if="${activeByGroupForMe[g.gruppeId]}">
+          <p class="group-title">
+            <strong th:text="${g.name}">Gruppenname</strong>
+            <span class="muted">(eingeladenes Mitglied)</span>
+          </p>
+
+          <div class="muted">Mitglieder:</div>
+          <ul class="members-list"
+              th:with="leftList=${leftByGroupUser != null ? leftByGroupUser[g.gruppeId] : null}">
+            <li th:each="m : ${membersByGroup[g.gruppeId]}">
+              <span th:text="${m.vorname + ' ' + m.nachname}">Max Muster</span>
+              <span> – </span>
+              <span th:text="${m.email}">max@example.com</span>
+              <span> – </span>
+              <span th:text="${m.aktiv ? 'aktiv' : (leftList != null ? (#lists.contains(leftList, m.nutzerId) ? 'ausgetreten' : 'ausstehend') : 'ausstehend')}">aktiv</span>
+              <span th:if="${m.nutzerId == g.ownerNutzerId}" class="muted"> (Owner)</span>
+            </li>
+          </ul>
+
+          <!-- Mensagens -->
+          <div th:if="${joinedMsgsByGroup != null and joinedMsgsByGroup[g.gruppeId] != null}">
+            <p th:each="msg : ${joinedMsgsByGroup[g.gruppeId]}" class="flash-ok msg" th:text="${msg}">Beitritt.</p>
+          </div>
+          <div th:if="${leftMsgsByGroup != null and leftMsgsByGroup[g.gruppeId] != null}">
+            <p th:each="msg : ${leftMsgsByGroup[g.gruppeId]}" class="flash-err msg" th:text="${msg}">Austritt.</p>
+          </div>
+
+          <!-- Ações do membro -->
+          <div class="row-actions">
+            <form th:action="@{/hg/gruppe/{id}(id=${g.gruppeId})}" method="get">
+              <button type="submit">Zur Gruppenseite</button>
+            </form>
+
+            <form th:action="@{/hg/gruppe/austreten}" method="post" th:id="${'leaveForm-' + g.gruppeId}">
+              <input type="hidden" name="groupId" th:value="${g.gruppeId}">
+            </form>
+            <a href="#"
+               th:attr="data-form-id=${'leaveForm-' + g.gruppeId}"
+               onclick="if(confirm('Wirklich aus dieser Gruppe austreten?')){ document.getElementById(this.dataset.formId).submit(); } return false;">
+              Aus der Gruppe austreten
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========= Convites recebidos ========= -->
+    <section class="card">
+      <h2 style="margin-top:0;">Einladungen zu Haushaltsgruppen</h2>
+
+      <p th:if="${invites == null or #lists.isEmpty(invites)}" class="muted">Keine Einladungen.</p>
+
+      <div th:each="i : ${invites}">
+        <p class="invite-title">
+          Sie haben eine Einladung von
+          <strong th:text="${i['fromName']}">User</strong>
+          zur Haushaltsgruppe
+          <strong th:text="${i['groupName']}">Gruppe</strong>.
+        </p>
+
+        <a href="#" class="toggle-link toggle-terms" th:attr="data-target=${'consent-' + i['id']}">
+          Teilnahmebedingungen anzeigen
+        </a>
+
+        <div class="consent-box" th:id="${'consent-' + i['id']}">
+          <form th:action="@{/hg/einladung/annahme}" method="post">
+            <input type="hidden" name="inviteId" th:value="${i['id']}">
+            <input type="hidden" name="groupId" th:value="${i['groupId']}">
+
+            <p class="muted">Mit dem Beitritt stimme ich zu, folgende Daten mit den Gruppenmitgliedern zu teilen:</p>
+
+            <label><input type="checkbox" name="share_name" checked> Kontoname</label><br>
+            <label><input type="checkbox" name="share_tx" checked> Transaktionen</label><br>
+            <label><input type="checkbox" name="share_betrag" checked> Betrag</label>
+
+            <div class="konto-share">
+              <strong>Konten freigeben:</strong>
+              <div class="muted" th:if="${bankkonten == null or #lists.isEmpty(bankkonten)}">Keine Konten vorhanden.</div>
+              <div class="konto-list" th:if="${bankkonten != null and !#lists.isEmpty(bankkonten)}">
+                <label th:each="k : ${bankkonten}">
+                  <input type="checkbox" name="konten" th:value="${k.bankKontoId}">
+                  <span th:text="${k.nameDerBank}">Bank</span>
+                  <span class="muted" th:text="${k.iban != null ? ' – IBAN ' + k.iban : ''}"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button type="submit">Übernehmen</button>
+              <a th:href="@{/haushaltsgruppe}">Abbrechen</a>
+            </div>
+          </form>
+        </div>
+
+        <form th:action="@{/hg/einladung/ignorieren}" method="post" class="invite-ignore">
+          <input type="hidden" name="inviteId" th:value="${i['id']}">
+          <button type="submit">Einladung ignorieren</button>
+        </form>
+
+        <hr>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- JS específico desta página -->
+  <script>
+    // Adiciona novas linhas de e-mail
+    document.addEventListener('click', function (e) {
+      if (e.target && e.target.id === 'addEmailBtn') {
+        const list = document.getElementById('emailList');
+        if (!list) return;
+        const row = document.createElement('div');
+        row.className = 'email-row';
+        row.innerHTML = '<input type="email" name="emails" placeholder="email@example.com" required>' +
+                        '<button class="add-btn" type="button" id="addEmailBtn">+</button>';
+        list.appendChild(row);
+      }
+    });
+
+    // Toggle "Teilnahmebedingungen anzeigen"
+    document.addEventListener('click', function(e){
+      const a = e.target.closest('.toggle-terms');
+      if (!a) return;
+      e.preventDefault();
+      const id = a.getAttribute('data-target');
+      const box = document.getElementById(id);
+      if (!box) return;
+      const open = box.style.display === 'block';
+      box.style.display = open ? 'none' : 'block';
+      a.textContent = open ? 'Teilnahmebedingungen anzeigen' : 'Teilnahmebedingungen verbergen';
+    });
+  </script>
+
+</body>
+</html>

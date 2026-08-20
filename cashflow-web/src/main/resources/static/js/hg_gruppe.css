@@ -1,0 +1,32 @@
+/* /css/hg_gruppe.css */
+.hg-gruppe-page .card{
+  padding:1rem; border:1px solid #e5e7eb; border-radius:12px;
+  margin:0 auto 1rem auto; background:#fff;
+}
+.hg-gruppe-page .muted{ color:#6b7280; }
+
+/* Gesamtsaldo */
+.hg-gruppe-page .total-box{
+  display:inline-block; padding:10px 14px; border-radius:12px;
+  background:#10B981; color:#fff; font-weight:700; letter-spacing:.2px;
+}
+.hg-gruppe-page .total-box.neg{ background:#EF4444; }
+
+/* Blocos de membros/contas */
+.hg-gruppe-page .member-block{ margin-top:12px; padding-top:8px; border-top:1px dashed #e5e7eb; }
+.hg-gruppe-page .konto-row{ display:flex; align-items:center; gap:10px; padding:4px 0; }
+.hg-gruppe-page .konto-row label{ display:flex; align-items:center; gap:8px; flex:1; }
+.hg-gruppe-page .saldo{ min-width:140px; text-align:right; }
+.hg-gruppe-page .saldo.pos{ color:#059669; }
+.hg-gruppe-page .saldo.neg{ color:#b91c1c; }
+
+/* Tabelas */
+.hg-gruppe-page table{ border-collapse: collapse; }
+.hg-gruppe-page .table-fit{ width:auto; margin:0 auto; }
+.hg-gruppe-page th, .hg-gruppe-page td{ border:1px solid #999; padding:6px; }
+
+/* Cores para valores */
+.hg-gruppe-page .amount-neg{ color:#b91c1c; font-weight:700; }
+.hg-gruppe-page .amount-pos{ color:#059669; font-weight:700; }
+
+.hg-gruppe-page .actions{ margin-top:10px; display:flex; justify-content:flex-end; }

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Konto hinzufügen / löschen</title>
+
+  <!-- CSS comum (header + navbar + utilidades) -->
+  <link rel="stylesheet" th:href="@{/css/site.css}">
+  <!-- CSS específico da página -->
+  <link rel="stylesheet" th:href="@{/css/konto.css}">
+
+  <!-- JS comum (dropdown do usuário + colapse da navbar) -->
+  <script defer th:src="@{/js/site.js}"></script>
+  <!-- JS específico da página -->
+  <script defer th:src="@{/js/konto.js}"></script>
+</head>
+<body>
+
+  <!-- Header compartilhado -->
+  <header th:replace="~{fragments/site-header :: siteHeader}"></header>
+  <hr>
+
+  <!-- Navbar compartilhada (apenas quando logado) -->
+  <th:block th:if="${session.eingeloggterNutzer != null}">
+    <nav th:replace="~{fragments/site-navbar :: siteNavbar(${gruppe}, ${ownedGroups}, ${memberGroups})}"></nav>
+    <hr>
+  </th:block>
+
+  <div class="container" th:if="${session.eingeloggterNutzer != null}">
+
+    <!-- HINZUFÜGEN -->
+    <section class="card">
+      <h1 style="margin-top:0;">Konto hinzufügen</h1>
+
+      <div class="option-row" id="kontoAddOptions" role="radiogroup" aria-label="Kontoart wählen">
+        <label class="checkbox-like" for="opt-bank">
+          <input type="checkbox" id="opt-bank" data-opt="bank" aria-checked="false">
+          <span>Bankkonto</span>
+        </label>
+        <label class="checkbox-like" for="opt-krypto">
+          <input type="checkbox" id="opt-krypto" data-opt="krypto" aria-checked="false">
+          <span>Kryptowährungskonto</span>
+        </label>
+        <label class="checkbox-like" for="opt-custom">
+          <input type="checkbox" id="opt-custom" data-opt="custom" aria-checked="false">
+          <span>Benutzerdefiniertes Konto</span>
+        </label>
+      </div>
+
+      <div class="section-gap"></div>
+
+      <form th:action="@{/konto/bank/hinzufuegen}" method="post" id="form-bank" class="fieldset" aria-hidden="true">
+        <label>Bankname</label>
+        <input type="text" name="bankname" placeholder="z. B. Sparkasse" required>
+        <label>IBAN</label>
+        <input type="text" name="iban" placeholder="DE00 0000 0000 0000 0000 00" required>
+        <label>BIC</label>
+        <input type="text" name="bic" placeholder="z. B. BYLADEM1001" required>
+      </form>
+
+      <form th:action="@{/konto/krypto/hinzufuegen}" method="post" id="form-krypto" class="fieldset" aria-hidden="true">
+        <label>Kontoname</label>
+        <input type="text" name="name" placeholder="z. B. Ledger-Wallet" required>
+        <label>Kryptowährung</label>
+        <select name="asset" disabled><option>Auswahl (demnächst)</option></select>
+        <div class="disabled-note">Diese Auswahl wird bald verfügbar sein.</div>
+        <label>Kursplattform</label>
+        <select name="preisquelle" disabled><option>Auswahl (demnächst)</option></select>
+        <div class="disabled-note">Diese Auswahl wird bald verfügbar sein.</div>
+      </form>
+
+      <form th:action="@{/konto/custom/hinzufuegen}" method="post" id="form-custom" class="fieldset" aria-hidden="true">
+        <label>Name</label>
+        <input type="text" name="name" placeholder="Kontoname" required>
+        <label>Beschreibung (optional)</label>
+        <input type="text" name="beschreibung" placeholder="Beschreibung">
+      </form>
+
+      <div class="section-gap"></div>
+
+      <p th:if="${successAdd}" class="flash-success" th:text="${successAdd}">
+        Konto wurde erfolgreich hinzugefügt.
+      </p>
+
+      <button type="button" id="btnAddSubmit">Übernehmen</button>
+    </section>
+
+    <div class="section-gap"></div>
+
+    <!-- BEARBEITEN / LÖSCHEN -->
+    <section class="card">
+      <h1 style="margin-top:0;">Konto bearbeiten / löschen</h1>
+
+      <p th:if="${!hasAnyKonten}">Sie haben noch keine Konten.</p>
+
+      <form th:action="@{/konto/bearbeiten}" method="post" th:if="${hasAnyKonten}">
+
+        <div th:if="${hasBank}">
+          <h3>Bankkonten</h3>
+          <table class="table-fit">
+            <thead>
+              <tr>
+                <th class="row-title">Bankname</th>
+                <th>IBAN</th>
+                <th>BIC</th>
+                <th>Löschen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="k : ${bankkonten}">
+                <td>
+                  <input type="hidden" name="bank_id" th:value="${k.bankKontoId}"/>
+                  <input type="text" name="bankname" th:value="${k.nameDerBank}" required>
+                </td>
+                <td><input type="text" name="iban" th:value="${k.iban}" required></td>
+                <td><input type="text" name="bic" th:value="${k.bic}" required></td>
+                <td style="text-align:center;"><input type="checkbox" name="delete_bank" th:value="${k.bankKontoId}"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-gap"></div>
+
+        <div th:if="${hasCustom}">
+          <h3>Benutzerdefinierte Konten</h3>
+          <table class="table-fit">
+            <thead>
+              <tr>
+                <th class="row-title">Kontoname</th>
+                <th>Beschreibung</th>
+                <th>Löschen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="k : ${customKonten}">
+                <td>
+                  <input type="hidden" name="custom_id" th:value="${k.bankKontoId}"/>
+                  <input type="text" name="c_name" th:value="${customNameMap[k.bankKontoId]}" required>
+                </td>
+                <td>
+                  <input type="text" name="c_beschreibung" th:value="${customDescMap[k.bankKontoId]}">
+                </td>
+                <td style="text-align:center;">
+                  <input type="checkbox" name="delete_custom" th:value="${k.bankKontoId}">
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-gap"></div>
+
+        <p th:if="${successEdit}" class="flash-success" th:text="${successEdit}">
+          Konten wurden erfolgreich aktualisiert.
+        </p>
+
+        <button type="submit">Übernehmen</button>
+      </form>
+    </section>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Cashflow – Startseite</title>
+
+  <!-- CSS comum (header + navbar + utilidades) -->
+  <link rel="stylesheet" th:href="@{/css/site.css}">
+  <!-- CSS específico da Home -->
+  <link rel="stylesheet" th:href="@{/css/home.css}">
+
+  <!-- JS comum (dropdown do usuário + colapse da navbar) -->
+  <script defer th:src="@{/js/site.js}"></script>
+</head>
+
+<body>
+
+  <!-- Header compartilhado -->
+  <header th:replace="~{fragments/site-header :: siteHeader}"></header>
+  <hr>
+
+  <!-- Navbar compartilhada (apenas quando logado) -->
+  <th:block th:if="${session.eingeloggterNutzer != null}">
+    <nav th:replace="~{fragments/site-navbar :: siteNavbar(${gruppe}, ${ownedGroups}, ${memberGroups})}"></nav>
+    <hr>
+  </th:block>
+
+  <div class="container">
+
+    <div th:if="${session.eingeloggterNutzer == null}">
+      <h1>Willkommen beim Cashflow!</h1>
+      <p><a href="/nutzer">Anmelden oder registrieren</a></p>
+    </div>
+
+    <div th:if="${session.eingeloggterNutzer != null}">
+
+      <h2 style="margin-bottom: 0.5rem;">
+        Gesamtsaldo:
+        <span class="saldo-box js-gesamtsaldo"
+              th:classappend="${#strings.startsWith(gesamtsaldo, '-')} ? ' saldo-neg' : ' saldo-pos'"
+              th:attr="data-raw=${gesamtsaldo}">0,00 €</span>
+      </h2>
+      <hr>
+
+      <h3>
+        Quellen
+        <span style="font-size:0.8em; font-weight:normal;">
+          (Markieren Sie alle Konten, die Sie in die Transaktionsliste und in den Gesamtsaldo einbeziehen möchten.)
+        </span>
+      </h3>
+
+      <!-- CONTAS BANCÁRIAS -->
+      <div th:if="${bankkonten != null and #lists.size(bankkonten) > 0}">
+        <div class="konto-block" th:each="k : ${bankkonten}" th:id="${'konto-' + k.bankKontoId}">
+          <div class="konto-line">
+            <label>
+              <input type="checkbox" name="checkedKonten" form="kontenForm"
+                     th:value="${k.bankKontoId}" th:checked="${k.checked}" />
+              <strong th:text="${k.nameDerBank}">Bankname</strong>
+            </label>
+            <span> | IBAN <span th:text="${k.iban}">DE00 0000 0000 0000 0000 00</span></span>
+          </div>
+
+          <div class="konto-line" style="margin-top:2px;">
+            <span>Saldo:&nbsp;</span>
+            <span
+              th:with="v=${T(java.lang.Math).abs(k.aktuellerSaldo) < 0.0005 ? 0.0 : k.aktuellerSaldo}"
+              th:classappend="${v < 0} ? 'neg' : 'pos'"
+              th:text="${(v > 0 ? '+' : (v < 0 ? '' : '')) + #numbers.formatDecimal(v,1,'POINT',2,'COMMA')} + ' EUR'">
+              0,00 EUR
+            </span>
+            <span>&nbsp; | &nbsp;Letzte Synchronisierung am: [Datum/Uhrzeit]</span>
+            <span>&nbsp;</span>
+            <a href="#" class="muted" onclick="return false;">Synchronisieren</a>
+          </div>
+
+          <div class="konto-actions">
+            <a href="#" data-action="saldo" th:attr="data-id=${k.bankKontoId}">Saldo anpassen</a>
+            <a href="#" data-action="tx" th:attr="data-id=${k.bankKontoId}">Transaktion einfügen</a>
+          </div>
+
+          <!-- Saldo-Abgleich -->
+          <div class="inline-form" th:id="${'saldo-form-' + k.bankKontoId}">
+            <form th:action="@{/konto/{id}/saldo/abgleichen(id=${k.bankKontoId})}" method="post">
+              <label>Neuer Saldo:</label>
+              <input type="text" class="fmt-euro" inputmode="decimal"
+                     th:value="${#numbers.formatDecimal(k.aktuellerSaldo,1,'POINT',2,'COMMA')}"
+                     data-post-name="neuerSaldo" />
+              <button type="submit">Übernehmen</button>
+            </form>
+          </div>
+
+          <!-- Nova Transação -->
+          <div class="inline-form" th:id="${'tx-form-' + k.bankKontoId}">
+            <form th:action="@{/konto/{id}/transaktion/anlegen(id=${k.bankKontoId})}" method="post">
+              <label>Datum:</label>
+              <input type="date" name="datum" th:value="${#temporals.format(#temporals.createNow(),'yyyy-MM-dd')}" />
+              <label>Titel (optional):</label>
+              <input type="text" name="titel" placeholder="Titel" />
+              <label>Betrag:</label>
+              <input type="text" class="fmt-euro" inputmode="decimal" data-post-name="betrag" />
+              <button type="submit">Übernehmen</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- BARGELD -->
+      <div class="konto-block" id="konto-cash">
+        <div class="konto-line">
+          <label>
+            <input type="checkbox" name="includeCash" form="kontenForm" th:checked="${includeCash}" />
+            <strong>Bargeld</strong>
+          </label>
+        </div>
+
+        <div class="konto-line" style="margin-top:2px;">
+          <span>Saldo:&nbsp;</span>
+          <span
+            th:with="v=${T(java.lang.Math).abs(saldoCash) < 0.0005 ? 0.0 : saldoCash}"
+            th:classappend="${v < 0} ? 'neg' : 'pos'"
+            th:text="${(v > 0 ? '+' : (v < 0 ? '' : '')) + #numbers.formatDecimal(v,1,'POINT',2,'COMMA')} + ' EUR'">
+            0,00 EUR
+          </span>
+        </div>
+
+        <div class="konto-actions">
+          <a href="#" data-action="saldo" data-id="cash">Saldo anpassen</a>
+          <a href="#" data-action="tx" data-id="cash">Transaktion einfügen</a>
+        </div>
+
+        <!-- Saldo Cash -->
+        <div class="inline-form" id="saldo-form-cash">
+          <form th:action="@{/cash/saldo/abgleichen}" method="post">
+            <label>Neuer Saldo:</label>
+            <input type="text" class="fmt-euro" inputmode="decimal"
+                   th:value="${#numbers.formatDecimal(saldoCash,1,'POINT',2,'COMMA')}"
+                   data-post-name="neuerSaldo" />
+            <button type="submit">Übernehmen</button>
+          </form>
+        </div>
+
+        <!-- Nova Transação Cash -->
+        <div class="inline-form" id="tx-form-cash">
+          <form th:action="@{/cash/transaktion/anlegen}" method="post">
+            <label>Datum:</label>
+            <input type="date" name="datum" th:value="${#temporals.format(#temporals.createNow(),'yyyy-MM-dd')}" />
+            <label>Titel (optional):</label>
+            <input type="text" name="titel" placeholder="Titel" />
+            <label>Betrag:</label>
+            <input type="text" class="fmt-euro" inputmode="decimal" data-post-name="betrag" />
+            <button type="submit">Übernehmen</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Form para gravar checkboxes das fontes -->
+      <form id="kontenForm" th:action="@{/home/updateCheckedKonten}" method="post">
+        <div style="margin-top:6px;">
+          <button type="submit">Übernehmen</button>
+        </div>
+      </form>
+
+      <hr>
+
+      <!-- GRÁFICO -->
+      <section class="card">
+        <h3 style="margin-top:0; text-align:left;">Saldo – letzte 30 Tage</h3>
+        <canvas id="saldoChart" width="900" height="220"></canvas>
+
+        <script th:inline="javascript">
+          const labels = /*[[${saldo30Labels}]]*/ [];
+          const values = /*[[${saldo30Values}]]*/ [];
+
+          (function draw(){
+            const canvas = document.getElementById('saldoChart');
+            if (!canvas || !values.length) return;
+            const ctx = canvas.getContext('2d');
+
+            function fmtEuroFixed(n, withSign){
+              if (typeof n === 'string') n = Number(n.replace(/\./g,'').replace(',', '.'));
+              if (isNaN(n)) n = 0;
+              const s = n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              return (withSign && n >= 0 ? '+' : '') + s + ' €';
+            }
+
+            const W = canvas.width, H = canvas.height;
+            const pad = {top: 16, right: 16, bottom: 28, left: 48};
+
+            const minVal = Math.min(...values), maxVal = Math.max(...values);
+            const padY = (maxVal - minVal) * 0.08 || 1;
+            const yMin = minVal - padY, yMax = maxVal + padY;
+
+            const x0 = pad.left, x1 = W - pad.right;
+            const y0 = H - pad.bottom, y1 = pad.top;
+
+            const n = values.length;
+
+            const compact = 0.80;
+            const Lfull = x1 - x0;
+            const L = Lfull * compact;
+            const offsetX = (Lfull - L) / 2;
+            const x0c = x0 + offsetX;
+            const x1c = x1 - offsetX;
+
+            const xStep = (x1c - x0c) / Math.max(1, n - 1);
+            const xAt = i => x0c + i * xStep;
+            const yAt = v => y0 - ((v - yMin) / (yMax - yMin)) * (y0 - y1);
+
+            ctx.clearRect(0,0,W,H);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0,0,W,H);
+
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < n; i += 5) {
+              const x = xAt(i);
+              ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, y0); ctx.stroke();
+            }
+
+            ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0, y1); ctx.stroke();
+
+            ctx.strokeStyle = '#111827';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < n; i++) {
+              const x = xAt(i), y = yAt(values[i]);
+              if (i === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+            }
+            ctx.stroke();
+
+            ctx.fillStyle = '#111827';
+            for (let i = 0; i < n; i++) {
+              const x = xAt(i), y = yAt(values[i]);
+              ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI*2); ctx.fill();
+            }
+
+            ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+            ctx.textBaseline = 'top';
+            for (let i = 0; i < n; i += 5) {
+              const x = xAt(i), y = yAt(values[i]);
+              const txt = fmtEuroFixed(values[i], true);
+              const w = ctx.measureText(txt).width + 8;
+              const h = 16;
+              const boxX = Math.min(Math.max(x - w/2, x0), x1 - w);
+              const boxY = Math.max(y - 24, y1);
+              ctx.fillStyle = '#f3f4f6';
+              ctx.fillRect(boxX, boxY, w, h);
+              ctx.strokeStyle = '#d1d5db';
+              ctx.strokeRect(boxX, boxY, w, h);
+              ctx.fillStyle = '#111827';
+              ctx.fillText(txt, boxX + 4, boxY + 2);
+
+              ctx.fillStyle = '#6b7280';
+              const dateTxt = labels[i] || '';
+              ctx.fillText(dateTxt, x - ctx.measureText(dateTxt).width/2, y0 + 6);
+            }
+            if ((n-1) % 5 !== 0) {
+              const i = n-1, x = xAt(i);
+              ctx.fillStyle = '#6b7280';
+              const dateTxt = labels[i] || '';
+              ctx.fillText(dateTxt, x - ctx.measureText(dateTxt).width/2, y0 + 6);
+            }
+
+            ctx.fillStyle = '#6b7280';
+            [yMin, yMax].forEach(v => {
+              const y = yAt(v);
+              const t = fmtEuroFixed(v, true);
+              ctx.fillText(t, 6, y - 6);
+            });
+
+            (function drawFinalLabel(){
+              const i = n - 1;
+              const x = xAt(i), y = yAt(values[i]);
+              const txt = fmtEuroFixed(values[i], true);
+              const w = ctx.measureText(txt).width + 8;
+              const h = 16;
+              const boxX = Math.min(Math.max(x - w/2, x0), x1 - w);
+              const boxY = Math.max(y - 24, y1);
+              const bg = values[i] >= 0 ? 'green' : '#EF4444';
+              const border = values[i] >= 0 ? '#059669' : '#DC2626';
+              ctx.fillStyle = bg; ctx.fillRect(boxX, boxY, w, h);
+              ctx.strokeStyle = border; ctx.strokeRect(boxX, boxY, w, h);
+              ctx.fillStyle = '#ffffff'; ctx.fillText(txt, boxX + 4, boxY + 2);
+            })();
+          })();
+        </script>
+      </section>
+
+      <h3>Transaktionen</h3>
+
+      <table class="table-fit" border="1" cellpadding="5" cellspacing="0">
+        <thead>
+          <tr>
+            <th>Datum</th>
+            <th>Quelle</th>
+            <th>Titel</th>
+            <th>Kat</th>
+            <th>Betrag</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="t : ${letzteTransaktionen}">
+            <td th:text="${#temporals.format(t.datum, 'dd.MM.yyyy')}">08.08.2025</td>
+            <td th:text="${t.quelle == 'Cash' ? 'Bargeld' : t.quelle}">Bargeld</td>
+            <td th:text="${t.beschreibung}">Titel</td>
+
+            <td th:with="
+                  _desc=${t.beschreibung},
+                  _descSafe=${_desc == null ? '' : _desc},
+                  _descUp=${#strings.toUpperCase(_descSafe)},
+                  _isAbgleich=${#strings.startsWith(_descUp,'MANUELLER SALDOABGLEICH')},
+                  _katRaw=${t.kategorie != null ? t.kategorie : (t.quelle == 'Cash' ? (_isAbgleich ? 'AUSGLEICH' : 'MANUELLE TRANSAKTION') : '')}
+                "
+                th:text="${_katRaw == 'AUSGLEICH' ? 'SALDOAUSGLEICH' : _katRaw}">
+              Kat
+            </td>
+
+            <td th:classappend="${t.betrag < 0} ? 'neg' : 'pos'"
+                th:text="${t.betrag > 0 ? '+' + #numbers.formatDecimal(t.betrag, 1, 'POINT', 2, 'COMMA') : #numbers.formatDecimal(t.betrag, 1, 'POINT', 2, 'COMMA')}">
+              0,00
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:10px;">
+        <div th:if="${!suchModus}">
+          <a href="/home">Aktualisieren</a> |
+          <a th:href="@{/home(limit=${limitAtual + 10})}">Weitere 10 Transaktionen anzeigen</a> |
+          <a th:href="@{/home(suche=true)}">Nach Datum suchen</a>
+        </div>
+        <div th:if="${suchModus}">
+          <a th:href="@{/home}">Zu den letzten Transaktionen</a>
+        </div>
+      </div>
+
+      <!-- ================== GEPLANTE ================== -->
+      <hr>
+
+      <div th:if="${!editGeplante}">
+        <h3>Geplante Transaktionen</h3>
+
+        <form th:action="@{/home}" method="get" style="margin-bottom:6px;">
+          <input type="hidden" name="limit" th:value="${limitAtual}" />
+          <label>Vorschau bis:
+            <input type="date" name="prognoseBis" th:value="${#temporals.format(prognoseBis, 'yyyy-MM-dd')}" />
+          </label>
+          <button type="submit">Aktualisieren</button>
+          <span> | <a th:href="@{/home(editGeplante=true, limit=${limitAtual}, prognoseBis=${#temporals.format(prognoseBis,'yyyy-MM-dd')})}">Geplante Transaktionen bearbeiten</a></span>
+        </form>
+
+        <section class="card" th:if="${hatGeplante}">
+          <h4>Nächste geplante Transaktionen bis
+            <span th:text="${#temporals.format(prognoseBis, 'dd.MM.yyyy')}">31.08.2025</span>
+          </h4>
+
+          <table class="table-fit" border="1" cellpadding="5" cellspacing="0" th:if="${prognoseVorgaenge != null}">
+            <thead>
+              <tr>
+                <th>Datum</th>
+                <th>Titel</th>
+                <th style="text-align:right;">Betrag</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="p : ${prognoseVorgaenge}">
+                <td th:text="${#temporals.format(p.datum, 'dd.MM.yyyy')}">31.08.2025</td>
+                <td th:text="${p.titel}">Miete</td>
+                <td style="text-align:right;"
+                    th:classappend="${p.betrag < 0} ? 'neg' : 'pos'"
+                    th:text="${p.betrag > 0 ? '+' + #numbers.formatDecimal(p.betrag,1,'POINT',2,'COMMA') : #numbers.formatDecimal(p.betrag,1,'POINT',2,'COMMA')}">
+                  0,00
+                </td>
+              </tr>
+              <tr th:if="${#lists.isEmpty(prognoseVorgaenge)}">
+                <td colspan="3">Keine Vorkommnisse im gewählten Zeitraum.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p style="margin-top:8px;">
+            <strong>Prognostizierter Saldo am
+              <span th:text="${#temporals.format(prognoseBis, 'dd.MM.yyyy')}">31.08.2025</span>:</strong>
+            <span th:classappend="${#strings.startsWith(prognoseSaldo, '-')} ? 'neg' : 'pos'"
+                  th:text="${prognoseSaldo}">0,00</span> €
+          </p>
+        </section>
+      </div>
+
+      <!-- EDITOR -->
+      <section class="card" th:if="${editGeplante}">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h4 style="margin:0;">Geplante Transaktionen bearbeiten</h4>
+          <a th:href="@{/home(limit=${limitAtual}, prognoseBis=${#temporals.format(prognoseBis,'yyyy-MM-dd')})}">Bearbeitung schließen</a>
+        </div>
+
+        <form th:action="@{/geplante/uebernehmen}" method="post">
+          <table class="table-fit">
+            <thead>
+              <tr>
+                <th>Titel</th>
+                <th>Datum</th>
+                <th>Periode</th>
+                <th>Betrag</th>
+                <th>Status</th>
+                <th>Löschen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="g,iter : ${geplanteTransaktionen}">
+                <input type="hidden" name="id" th:value="${g.geplanteId}" />
+                <td><input type="text" name="titel" th:value="${g.titel}" /></td>
+                <td><input type="date" name="datum"
+                           th:value="${g.startDatum != null ? #temporals.format(g.startDatum,'yyyy-MM-dd') : ''}" /></td>
+                <td>
+                  <select name="periode">
+                    <option value="EINMALIG"         th:selected="${g.periode} == 'EINMALIG'">einmalig</option>
+                    <option value="MONATLICH"        th:selected="${g.periode} == 'MONATLICH'">monatlich</option>
+                    <option value="WOECHENTLICH"     th:selected="${g.periode} == 'WOECHENTLICH'">wöchentlich</option>
+                    <option value="VIERTELJAEHRLICH" th:selected="${g.periode} == 'VIERTELJAEHRLICH'">vierteljährlich</option>
+                    <option value="JAEHRLICH"        th:selected="${g.periode} == 'JAEHRLICH'">jährlich</option>
+                  </select>
+                </td>
+                <td>
+                  <input type="text" class="fmt-euro" inputmode="decimal"
+                         th:value="${#numbers.formatDecimal(g.betrag,1,'POINT',2,'COMMA')}"
+                         data-post-name="betrag" />
+                </td>
+                <td>
+                  <select name="status">
+                    <option value="AKTIV"   th:selected="${g.status} == 'AKTIV'">aktiv</option>
+                    <option value="BEZAHLT" th:selected="${g.status} == 'BEZAHLT'">bezahlt</option>
+                  </select>
+                </td>
+                <td><input type="checkbox" name="delete" th:value="${iter.index}" /></td>
+              </tr>
+
+              <tr>
+                <input type="hidden" name="id" value="0" />
+                <td><input type="text" name="titel" value="" /></td>
+                <td><input type="date" name="datum"
+                           th:value="${#temporals.format(#temporals.createNow(),'yyyy-MM-dd')}" /></td>
+                <td>
+                  <select name="periode">
+                    <option value="EINMALIG">einmalig</option>
+                    <option value="MONATLICH" selected>monatlich</option>
+                    <option value="WOECHENTLICH">wöchentlich</option>
+                    <option value="VIERTELJAEHRLICH">vierteljährlich</option>
+                    <option value="JAEHRLICH">jährlich</option>
+                  </select>
+                </td>
+                <td>
+                  <input type="text" class="fmt-euro" inputmode="decimal" value="0,00" data-post-name="betrag" />
+                </td>
+                <td>
+                  <select name="status">
+                    <option value="AKTIV" selected>aktiv</option>
+                    <option value="BEZAHLT">bezahlt</option>
+                  </select>
+                </td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="margin-top:10px;">
+            <button type="submit">Übernehmen</button>
+            <a th:href="@{/home(limit=${limitAtual}, prognoseBis=${#temporals.format(prognoseBis,'yyyy-MM-dd')})}"
+               style="margin-left:10px;">Abbrechen</a>
+          </div>
+        </form>
+      </section>
+      <!-- ================== /GEPLANTE ================== -->
+
+    </div>
+  </div>
+
+  <!-- Toggle Saldo/Transação forms -->
+  <script>
+    document.addEventListener('click', function(e) {
+      const a = e.target.closest('a[data-action]');
+      if (!a) return;
+      e.preventDefault();
+      const id = a.getAttribute('data-id');
+      const action = a.getAttribute('data-action'); // 'saldo' | 'tx'
+
+      document.querySelectorAll('.inline-form').forEach(el => el.style.display = 'none');
+
+      const targetId = (id === 'cash')
+        ? (action === 'saldo' ? 'saldo-form-cash' : 'tx-form-cash')
+        : (action === 'saldo' ? `saldo-form-${id}` : `tx-form-${id}`);
+      const el = document.getElementById(targetId);
+      if (el) el.style.display = 'block';
+    });
+  </script>
+
+  <!-- Máscara DE em inputs .fmt-euro + normalização no submit -->
+  <script>
+    function normalizeEuroToDot(str){
+      if (typeof str !== 'string') return '';
+      str = str.trim();
+      if (!str) return '';
+      let neg = false;
+      if (str.startsWith('-')) { neg = true; str = str.slice(1); }
+      str = str.replace(/\./g,'');  // remove milhar
+      str = str.replace(',', '.');  // vírgula -> ponto
+      str = str.replace(/[^0-9.]/g,'');
+      if (!str) return neg ? '-0' : '0';
+      return (neg ? '-' : '') + str;
+    }
+
+    document.addEventListener('input', function(e){
+      const el = e.target;
+      if (!el.classList || !el.classList.contains('fmt-euro')) return;
+      let v = el.value;
+      v = v.replace(/[^\d.,-]/g,'');
+      const neg = v.startsWith('-');
+      v = v.replace(/-/g,'');
+      const parts = v.split(',');
+      let intPart = (parts[0] || '').replace(/\./g,'');
+      let decPart = parts[1] || '';
+      intPart = intPart.replace(/^0+(?=\d)/,'');
+      if (decPart.length > 2) decPart = decPart.slice(0,2);
+      intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      el.value = (neg ? '-' : '') + intPart + (decPart ? (',' + decPart) : '');
+    });
+
+    document.addEventListener('submit', function(e){
+      const form = e.target;
+      form.querySelectorAll('input[type="hidden"][data-generated="true"]').forEach(h => h.remove());
+      const widgets = form.querySelectorAll('input.fmt-euro[data-post-name]');
+      widgets.forEach(w => {
+        const name = w.getAttribute('data-post-name');
+        const norm = normalizeEuroToDot(w.value);
+        const h = document.createElement('input');
+        h.type = 'hidden';
+        h.name = name;
+        h.value = norm;
+        h.setAttribute('data-generated','true');
+        form.appendChild(h);
+      });
+    });
+  </script>
+
+  <!-- Formata Gesamtsaldo -->
+  <script>
+    function formatEuroFixed(n, withSign){
+      if (typeof n === 'string') n = Number(n.replace(/\./g,'').replace(',', '.'));
+      if (isNaN(n)) return '';
+      const s = n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return (withSign && n >= 0 ? '+' : '') + s + ' €';
+    }
+
+    document.querySelectorAll('.js-gesamtsaldo').forEach(el=>{
+      const raw = el.getAttribute('data-raw') || el.textContent || '';
+      el.textContent = formatEuroFixed(raw, false);
+    });
+  </script>
+
+</body>
+</html>
