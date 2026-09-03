@@ -82,3 +82,15 @@ jobs:
           mvn -B -f cashflow-web/pom.xml
           "-Dtest=NutzerSeleniumTest#sollteFormularLayoutAnViewportAnpassen"
           test
+          
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: backend-tests
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build Docker image
+        run: docker build --tag cashflow-web:ci .
