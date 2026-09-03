@@ -3,6 +3,7 @@ package com.cashflow.cashflow_web.e2e;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.By;
@@ -11,6 +12,7 @@ import org.openqa.selenium.WebElement;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Tag("e2e")
 public class NutzerSeleniumTest {
 
     private WebDriver driver;

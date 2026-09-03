@@ -12,7 +12,11 @@ import java.sql.SQLException;
 @Controller
 public class NutzerController {
 
-    private final NutzerDAO nutzerDAO = new NutzerDAO();
+    private final NutzerDAO nutzerDAO;
+
+    public NutzerController(NutzerDAO nutzerDAO) {
+        this.nutzerDAO = nutzerDAO;
+    }
 
     // Exibe a página combinada de login + cadastro
     @GetMapping("/nutzer")
