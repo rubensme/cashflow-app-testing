@@ -1,208 +1,241 @@
-\# CashFlow App
+# CashFlow
 
+[![CashFlow CI](https://github.com/rubensme/cashflow-app-testing/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/rubensme/cashflow-app-testing/actions/workflows/backend-tests.yml)
 
+CashFlow ist eine Java-/Spring-Boot-Anwendung zur Verwaltung persönlicher Finanzen. Sie unterstützt unter anderem Konten, Transaktionen, geplante Ausgaben, Cashflow-Prognosen, Sparziele und Haushaltsgruppen.
 
-Eine Java-/Spring-Boot-Anwendung zur Verwaltung persönlicher Finanzen mit Konten, Transaktionen, geplanten Ausgaben, Sparzielen und Haushaltsgruppen.
+Das Projekt entstand während meiner Umschulung zum Fachinformatiker für Anwendungsentwicklung und wird als praxisorientiertes Lern- und Portfolio-Projekt weiterentwickelt. Der aktuelle Schwerpunkt liegt auf einer nachvollziehbaren Teststrategie mit automatisierten Tests auf mehreren Ebenen.
 
+> **Projektstatus:** Work in Progress. Die Anwendung ist ein Lernprojekt und noch nicht für den produktiven Einsatz vorgesehen.
 
+## Architektur
 
-Das Projekt entstand ursprünglich im Rahmen meiner Umschulung zum Fachinformatiker für Anwendungsentwicklung und wurde anschließend gezielt um automatisierte Tests auf mehreren Ebenen erweitert.
+Das Repository besteht aus zwei getrennten Maven-Modulen:
 
+| Modul | Aufgabe |
+| --- | --- |
+| `cashflow-app` | Domänenmodelle, Geschäftslogik, Services, JDBC-DAOs, SQLite-Zugriff und Konsolenanwendung |
+| `cashflow-web` | Spring-Boot-Webanwendung, MVC- und REST-Controller, Thymeleaf-Templates, CSS/JavaScript sowie Web- und UI-Tests |
 
+`cashflow-web` verwendet `cashflow-app` als Maven-Abhängigkeit. Deshalb muss das Kernmodul vor dem Webmodul gebaut und im lokalen Maven-Repository installiert werden.
 
-\## Technologien
+```mermaid
+flowchart LR
+    Browser --> MVC["Spring MVC Controller"]
+    MVC --> View["Thymeleaf View"]
+    MVC --> Core["cashflow-app"]
+    Client["REST Client"] --> API["REST Controller"]
+    API --> Core
+    Core --> DAO["JDBC DAOs"]
+    DAO --> DB[(SQLite)]
+```
 
+## Technologien
 
+- Java 21
+- Spring Boot 3.5.4
+- Spring MVC und Thymeleaf
+- Maven
+- JDBC und SQLite
+- JUnit 5
+- Mockito
+- Spring MockMvc
+- Selenium WebDriver und Selenium Manager
+- Docker
+- GitHub Actions
 
-\- Java
+## Teststrategie
 
-\- Spring Boot
+Die Tests sind nach Verantwortungsbereich und benötigter Infrastruktur getrennt. Schnell ausführbare Tests bilden die Basis; browserbasierte Tests prüfen ausgewählte Abläufe aus Benutzersicht.
 
-\- Maven
+| Testart | Werkzeuge | Prüfschwerpunkt | Beispiele |
+| --- | --- | --- | --- |
+| Domain Unit Tests | JUnit 5 | Geschäftsregeln ohne Spring und Datenbank | Fälligkeiten, Monatswechsel, Prognoseberechnung |
+| Controller Unit Tests | JUnit 5, Mockito | Controller-Verhalten mit isoliertem DAO | erfolgreicher Login, falsches Passwort, Datenbankfehler |
+| Spring Integration Tests | `@SpringBootTest`, MockMvc | Application Context und MVC-Verhalten | Laden der Nutzerseite, Validierung leerer Registrierungsfelder |
+| Web/API Slice Tests | `@WebMvcTest`, MockMvc, `@MockitoBean` | Request Mapping, HTTP-Status, JSON und Controller-DAO-Interaktion | Status API, Konten API, `401` und `500` |
+| Browser UI Tests | Selenium WebDriver | Verhalten im echten Browser | Formulare, Fehlermeldungen und responsives Layout |
 
-\- Thymeleaf
+Mockito ist dabei kein eigenes Testlevel. Es ersetzt ausgewählte Abhängigkeiten durch kontrollierbare Test Doubles. Dadurch kann beispielsweise das Verhalten eines Controllers geprüft werden, ohne auf eine echte Datenbank zuzugreifen.
 
-\- SQLite / JDBC
+MockMvc sendet simulierte HTTP-Anfragen durch die Spring-MVC-Infrastruktur, startet aber keinen echten Browser. Selenium arbeitet dagegen mit einem realen Chrome-Browser und prüft die Anwendung über ihre Benutzeroberfläche.
 
-\- JUnit 5
+### Eingesetzte Testentwurfstechniken
 
-\- Spring MockMvc
+- positive und negative Testfälle für Login und API-Zugriffe
+- Grenzwertanalyse bei Datumsabständen, insbesondere drei gegenüber vier Tagen
+- Regressionstests für bereits korrigierte Fehler in der Prognoselogik
+- Fehlersimulation mit Mockito, beispielsweise durch eine ausgelöste `SQLException`
+- parametrisierte Tests für repräsentative Desktop-, Tablet- und Mobile-Viewports
+- Prüfung auf horizontalen Overflow sowie sichtbare und aktivierte Bedienelemente
 
-\- Selenium WebDriver
+### Testklassen
 
-\- ChromeDriver / Selenium Manager
+**`cashflow-app`**
 
+- `FesteAusgabeTest`
+- `PrognoseServiceTest`
 
+**`cashflow-web`**
 
-\## Projektstruktur
+- `CashflowWebApplicationTests`
+- `NutzerControllerMockitoTest`
+- `StatusRestControllerTest`
+- `AccountRestControllerTest`
+- `NutzerSeleniumTest`
 
+## REST API
 
+Die REST API befindet sich im Aufbau und umfasst derzeit zwei GET-Endpunkte:
 
-Das Repository besteht aus zwei Modulen:
+| Endpunkt | Beschreibung | Mögliche Statuscodes |
+| --- | --- | --- |
+| `GET /api/status` | Liefert den Status und Namen der Anwendung als JSON | `200` |
+| `GET /api/accounts` | Liefert die Konten des in der HTTP-Session angemeldeten Nutzers als JSON | `200`, `401`, `500` |
 
+Beispielantwort von `GET /api/status`:
 
+```json
+{
+  "status": "UP",
+  "application": "CashFlow"
+}
+```
 
-\### `cashflow-app`
+## Continuous Integration
 
+Der GitHub-Actions-Workflow wird bei Pushes und Pull Requests auf `main` sowie manuell ausgeführt.
 
+```mermaid
+flowchart TD
+    Push["Push / Pull Request"] --> Backend["Unit and API Tests"]
+    Backend --> Selenium["Responsive Selenium Tests"]
+    Backend --> Docker["Docker Build"]
+```
 
-Enthält die zentrale Geschäftslogik sowie:
+Der Workflow:
 
+1. baut und testet das Kernmodul;
+2. führt die Spring-, Mockito- und API-Tests ohne die E2E-Gruppe aus;
+3. startet die Anwendung und führt den responsiven Selenium-Test headless aus;
+4. baut das Docker-Image als zusätzliche Build-Validierung.
 
+Die Docker-Stufe veröffentlicht kein Image in einer Registry. Sie stellt sicher, dass sich der aktuelle Stand reproduzierbar aus dem `Dockerfile` bauen lässt. Die Tests werden im Docker-Build übersprungen, weil sie bereits im vorgelagerten Test-Job ausgeführt wurden.
 
-\- Models
+## Lokale Ausführung
 
-\- DAOs
+### Voraussetzungen
 
-\- Services
+- JDK 21
+- Maven 3.9 oder neuer
+- Chrome für lokale Selenium-Tests
+- Docker Desktop für die containerisierte Ausführung
 
-\- SQLite-Datenzugriff
+### Kernmodul bauen und testen
 
-\- Unit Tests
+```bash
+mvn -B -f cashflow-app/pom.xml clean install
+```
 
+### Web-, Mockito- und API-Tests ausführen
 
+```bash
+mvn -B -f cashflow-web/pom.xml test -DexcludedGroups=e2e
+```
 
-\### `cashflow-web`
+### Webanwendung starten
 
+```bash
+mvn -B -f cashflow-web/pom.xml spring-boot:run
+```
 
+Danach sind beispielsweise folgende Adressen erreichbar:
 
-Spring-Boot-Webanwendung mit:
+- `http://localhost:8080/nutzer`
+- `http://localhost:8080/api/status`
 
+### Responsiven Selenium-Test ausführen
 
+Die Webanwendung muss bereits auf Port `8080` laufen. Anschließend:
 
-\- MVC-Controllern
+```bash
+mvn -B -f cashflow-web/pom.xml "-Dtest=NutzerSeleniumTest#sollteFormularLayoutAnViewportAnpassen" test
+```
 
-\- Thymeleaf-Templates
+Der parametrisierte Test prüft aktuell diese Viewports:
 
-\- HTML/CSS/JavaScript
+- Desktop: `1440 × 900`
+- Tablet: `768 × 1024`
+- Mobile: `390 × 844`
 
-\- Integrationstests mit MockMvc
+Die übrigen Selenium-Tests setzen teilweise eine lokal initialisierte SQLite-Datenbank voraus und werden deshalb noch nicht vollständig in der CI ausgeführt.
 
-\- End-to-End-Tests mit Selenium WebDriver
+## Docker
 
+### Image bauen
 
+```bash
+docker build -t cashflow-web:local .
+```
 
-\## Teststrategie
+### Container starten
 
+```bash
+docker run --name cashflow-web-container -p 8080:8080 -d cashflow-web:local
+```
 
+### Logs anzeigen
 
-Das Projekt enthält Tests auf mehreren Ebenen.
+```bash
+docker logs cashflow-web-container
+```
 
+Anschließend kann `http://localhost:8080/api/status` im Browser aufgerufen werden.
 
+### Container beenden und entfernen
 
-\### Unit Tests
+```bash
+docker stop cashflow-web-container
+docker rm cashflow-web-container
+```
 
+Lokale Datenbankdateien werden absichtlich nicht in das Docker-Image kopiert. Eine reproduzierbare Datenbankinitialisierung mit PostgreSQL und Flyway ist Teil der nächsten Entwicklungsstufe.
 
+## Durch Tests gefundene Fehler
 
-JUnit-Tests prüfen unter anderem:
+### Erkennung bereits bezahlter Ausgaben
 
+Feste Ausgaben wurden als positive Beträge gespeichert, Transaktionen dagegen als negative Beträge. Dadurch konnte eine bereits bezahlte Ausgabe fälschlicherweise erneut von der Prognose abgezogen werden. Die Vergleichslogik wurde korrigiert und durch einen Regressionstest abgesichert.
 
+### Berechnung des Datumsabstands
 
-\- Berechnung der nächsten Fälligkeit fester Ausgaben
+Zur Prüfung, ob eine Transaktion zeitlich nahe an einer Fälligkeit lag, wurde ursprünglich `LocalDate.compareTo()` verwendet. Diese Methode liefert keine Anzahl von Tagen. Die Berechnung wurde auf `ChronoUnit.DAYS.between()` umgestellt und mit Grenzwerttests für drei beziehungsweise vier Tage abgesichert.
 
-\- Monats- und Jahreswechsel
+## Aktuelle Grenzen
 
-\- Grenzfälle bei Datumsberechnungen
+- Die REST API bildet bisher nur einen kleinen Teil der Anwendung ab und verwendet die vorhandene HTTP-Session zur Authentifizierung.
+- Das SQLite-Schema wird noch nicht durch versionierte Migrationen erzeugt.
+- Die vollständigen datenabhängigen Selenium-Tests sind noch nicht unabhängig von lokalen Testdaten ausführbar.
+- Die responsive Selenium-Abdeckung konzentriert sich derzeit auf die Login- und Registrierungsseite.
+- Die Authentifizierung ist noch ein Lernprototyp ohne Spring Security und sicheres Passworthashing.
+- Die Selenium-Tests verwenden noch keine Page Objects.
 
-\- Cashflow-Prognosen
+## Roadmap
 
-\- Erkennung bereits bezahlter Ausgaben
+### Nächste Schritte
 
+- PostgreSQL und Flyway
+- Integrationstests mit Testcontainers
+- Docker Compose für Anwendung und Datenbank
+- Ausbau der REST-API-Tests
+- WireMock für kontrollierte externe Abhängigkeiten
+- Selenium Page Objects
+- vollständige responsive Überarbeitung der Weboberfläche
 
+### Spätere Erweiterungen
 
-Beispiele:
-
-
-
-\- `FesteAusgabeTest`
-
-\- `PrognoseServiceTest`
-
-
-
-\### Integrationstests
-
-
-
-Mit Spring Boot und MockMvc werden Controller und MVC-Verhalten ohne echten Browser getestet.
-
-
-
-Beispiele:
-
-
-
-\- Laden der Nutzerseite
-
-\- Prüfung des zurückgegebenen Views und Models
-
-\- Validierung unvollständiger Registrierungsdaten
-
-
-
-\### End-to-End-Tests
-
-
-
-Selenium WebDriver steuert einen echten Chrome-Browser und prüft die Anwendung aus Benutzersicht.
-
-
-
-Beispiele:
-
-
-
-\- Laden der Login-/Registrierungsseite
-
-\- Eingabe in Formularfelder
-
-\- HTML5-Validierung bei fehlendem Passwort
-
-\- Ablehnung ungültiger Login-Daten und Prüfung der Fehlermeldung
-
-
-
-\## Durch Tests gefundene Fehler
-
-
-
-Beim Ausbau der Tests wurden unter anderem zwei Fehler in der Prognoselogik entdeckt.
-
-
-
-\### Erkennung bereits bezahlter Ausgaben
-
-
-
-Ausgaben wurden als positive Beträge gespeichert, Transaktionen dagegen als negative Beträge. Dadurch konnte eine bereits bezahlte Ausgabe fälschlicherweise erneut von der Prognose abgezogen werden.
-
-
-
-Die Vergleichslogik wurde korrigiert und anschließend durch einen Regressionstest abgesichert.
-
-
-
-\### Berechnung des Datumsabstands
-
-
-
-Zur Prüfung, ob eine Transaktion zeitlich nahe an einer Fälligkeit lag, wurde ursprünglich `LocalDate.compareTo()` verwendet. Diese Methode liefert jedoch keine Anzahl von Tagen.
-
-
-
-Die Berechnung wurde auf `ChronoUnit.DAYS.between()` umgestellt und mit Grenzwerttests für drei bzw. vier Tage abgesichert.
-
-
-
-\## Datenbank
-
-
-
-Standardmäßig verwendet die Anwendung eine lokale SQLite-Datenbank:
-
-
-
-```text
-
-jdbc:sqlite:cashflow.db
-
+- Hybrid-App mit Capacitor
+- Android-Tests mit Appium und UiAutomator2
+- plattformübergreifende Web- und Mobile-Test-Suite
+- Performance-, Security- und Contract-Testing
+- Cloud-Deployment und Container-Orchestrierung
